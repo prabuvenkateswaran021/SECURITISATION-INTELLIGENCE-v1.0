@@ -7,9 +7,7 @@
 > testing, sequential-pay waterfall mechanics, and an investor-grade
 > dashboard.
 
-![architecture](reports/figures/architecture.png)
-
-[![tests](https://img.shields.io/badge/tests-113%20passing-brightgreen)]() [![coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)]()
+[![tests](https://img.shields.io/badge/tests-41%20passing-brightgreen)]() [![coverage](https://img.shields.io/badge/coverage-98%25-brightgreen)]()
  [![license](https://img.shields.io/badge/license-Proprietary-orange)]()
 
 ---
@@ -39,26 +37,29 @@ star-schema set of CSVs sized for direct Power BI import.
 git clone https://github.com/ZethetaIntern/matrisk-ai
 cd matrisk-ai
 
-# 2. Run everything in Docker (recommended)
-cp .env.example .env
-docker compose up --build
+# 2. Install the package (Python 3.10+)
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,serve]"
 
-# 3. Open the dashboard
-open http://localhost:8000/dashboard
+# 3. Generate the seeded pool and run the full pipeline
+matrisk generate
+matrisk pipeline run --dashboard-out dashboard/data_inline.js
 
-# 4. (Optional) Browse MLflow runs
-open http://localhost:5000
+# 4. (Optional) Serve the analytics API
+uvicorn matrisk.serve.app:app --reload   # then GET /health /kpis /ecl /stress
 ```
 
-Or run locally:
+The raw CSVs are generated deterministically from `configs/default.yaml`
+(`generate.seed`), so the entire pool — and every KPI downstream — is
+fully reproducible. If `data/raw/` is missing, any command regenerates it
+on demand.
+
+Other useful commands:
 
 ```bash
-python3.11 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,docs]"
-matrisk pipeline run \
-    --raw-dir   data/raw \
-    --config    configs/default.yaml \
-    --dashboard-out dashboard/data_inline.js
+matrisk kpis          # headline KPI bundle as JSON
+matrisk crosscheck    # reconcile recomputed ECL vs stored provisions
+matrisk stress        # print the 5-scenario stress sweep
 ```
 
 ## What you get
@@ -67,10 +68,11 @@ After one `pipeline run`:
 
 ```
 data/processed/
-├── metrics_portfolio.json     ← pool KPIs (pool factor, WAC, WAM, NPA, ECL)
+├── dashboard_payload.json     ← full payload (KPIs, ECL, stress, waterfall, strata)
 ├── stress_results.csv         ← 5 stress scenarios × ECL + uplift
-└── waterfall.csv              ← 84 cash-flow line items across 12 months
-dashboard/data_inline.js       ← `window.DATA = {...}` for dashboard.html
+├── tranche_allocation.csv     ← bottom-up loss absorption by tranche
+└── waterfall.csv              ← cash-flow line items across the loss history
+dashboard/data_inline.js       ← `window.DATA = {...}` shim for the HTML dashboard
 ```
 
 Sample KPI output for the pilot pool:
@@ -79,49 +81,53 @@ Sample KPI output for the pilot pool:
 |---|---|
 | Pool factor | 0.582 |
 | Current balance | ₹31.78 cr |
-| WAC | 10.95% |
-| WAM | 45.1 months |
-| Weighted LTV | 67.5% |
-| Weighted CIBIL | 742 |
-| 30+ DPD | 14.1% of pool |
-| NPA (90+) | 5.57% |
-| IFRS 9 ECL | ₹1.17 cr (coverage 3.58%) |
+| WAC | 11.12% |
+| WAM | 40.0 months |
+| Weighted LTV | 70.0% |
+| Weighted CIBIL | 746 |
+| 30+ DPD | 14.3% of pool |
+| NPA (90+) | 6.01% |
+| IFRS 9 ECL | ₹1.41 cr (coverage 4.45%) |
 
 Sample stress sweep (PD × LGD multipliers, ECL in cr):
 
 | Scenario | PD mult | LGD mult | ECL | Uplift |
 |---|---|---|---|---|
-| BASE | 1.00 | 1.00 | 1.17 | — |
-| MILD | 1.30 | 1.10 | 1.57 | +35% |
-| MODERATE | 1.80 | 1.25 | 2.11 | +81% |
-| SEVERE | 2.80 | 1.45 | 3.09 | +165% |
-| CRISIS | 4.50 | 1.75 | 4.96 | +325% |
+| BASE | 1.00 | 1.00 | 1.41 | — |
+| MILD | 1.30 | 1.10 | 1.79 | +27% |
+| MODERATE | 1.80 | 1.25 | 2.49 | +76% |
+| SEVERE | 2.80 | 1.45 | 3.82 | +170% |
+| CRISIS | 4.50 | 1.75 | 6.26 | +343% |
 
-The pilot pool's 18.5% senior credit enhancement absorbs all five
-scenarios; mezzanine starts taking writedowns above CRISIS.
+The pilot pool's 20% senior credit enhancement (12% mezzanine + 8% equity)
+absorbs the stressed ECL across all five scenarios; the equity tranche
+takes the first writedowns under CRISIS.
 
 ## Repository layout
 
 ```
 matrisk-ai/
-├── src/matrisk/             ← installable Python package
-│   ├── data/                ← loaders, pydantic schemas
-│   ├── analytics/           ← portfolio, credit, stress, waterfall
-│   ├── reporting/           ← dashboard payload assembly
-│   ├── cli/                 ← click-based CLI (entry point: `matrisk`)
-│   └── serve/               ← FastAPI service (/health, /kpis, /stress, /dashboard)
-├── tests/                   ← pytest suite (113 tests, 95% coverage)
-├── configs/default.yaml     ← all policy thresholds, scenarios, tranches
+├── src/matrisk/                  ← installable Python package
+│   ├── config.py                 ← typed loader for configs/default.yaml
+│   ├── data/                     ← seeded generator, loaders, pydantic schemas
+│   ├── analytics/                ← portfolio, credit (ECL), stress, waterfall
+│   ├── reporting/                ← dashboard payload assembly
+│   ├── cli/                      ← click-based CLI (entry point: `matrisk`)
+│   ├── serve/                    ← FastAPI service (/health, /kpis, /ecl, /stress)
+│   └── pipeline.py               ← end-to-end orchestration
+├── tests/                        ← pytest suite (41 tests, 98% coverage)
+├── configs/default.yaml          ← all policy thresholds, scenarios, tranches
 ├── data/
-│   ├── raw/                 ← 4 source CSVs
-│   └── processed/           ← 18 star-schema dim/fact + pipeline outputs
-├── dashboard/               ← HTML dashboard + generated data_inline.js
-├── docs/                    ← Sphinx documentation (autodoc)
-├── powerbi/                 ← star schema + 110+ DAX measures
-├── reports/                 ← technical report + architecture diagram
-├── scripts/                 ← MLflow sweep, architecture renderer
-├── dvc.yaml                 ← reproducible DAG pipeline
-├── docker-compose.yml       ← api + mlflow stack
+│   ├── raw/                      ← generated source + dimension CSVs
+│   └── processed/                ← pipeline outputs (payload, stress, waterfall)
+├── dashboard/                    ← data_inline.js shim for index.html
+├── index.html                    ← standalone investor dashboard
+├── dax_measure_library.dax.txt   ← 139 Power BI DAX measures
+├── dax_measure_dictionary.xlsx   ← measure dictionary
+├── ecl_crosscheck.xlsx           ← IFRS 9 ECL Excel crosscheck
+├── waterfall_validation.xlsx     ← waterfall manual validation
+├── star_schema.md                ← data-model documentation
+├── technical_report.md / .pdf    ← main report
 └── pyproject.toml
 ```
 
@@ -129,8 +135,9 @@ matrisk-ai/
 
 `matrisk pipeline run` chains five steps:
 
-1. **Ingest** — read the four raw CSVs, normalise column names, coerce
-   types, auto-detect ratio columns and rescale to percent.
+1. **Ingest** — load the raw + dimension CSVs (generating them seeded if
+   absent) and validate every loan row against the pydantic `LoanRecord`
+   schema at the boundary.
 2. **Portfolio** — compute weighted-average pool KPIs (pool factor,
    WAC, WAM, WALA, LTV, DTI, CIBIL, delinquency buckets, NPA, default
    rate, ECL coverage).
@@ -141,10 +148,8 @@ matrisk-ai/
    waterfall across the loss history, returning one row per (period,
    step).
 5. **Reporting** — assemble the dashboard payload and write it to
-   `data_inline.js`.
-
-DVC users can run the same pipeline as a tracked DAG with
-`dvc repro`.
+   `data/processed/dashboard_payload.json` (and an optional
+   `data_inline.js` shim via `--dashboard-out`).
 
 ## Configuration
 
@@ -170,49 +175,29 @@ matrisk pipeline run --config configs/scenario_X.yaml
 pytest --cov=matrisk
 ```
 
-The CI gate is 60% coverage; the suite currently sits at **95%**:
+The suite currently sits at **98%** across 41 tests:
 
 | Module | Coverage |
 |---|---|
-| `matrisk.data.loaders` | 93% |
+| `matrisk.config` | 100% |
+| `matrisk.data.generate` | 99% |
 | `matrisk.data.schemas` | 100% |
-| `matrisk.analytics.portfolio` | 96% |
-| `matrisk.analytics.credit` | 98% |
+| `matrisk.analytics.portfolio` | 100% |
+| `matrisk.analytics.credit` | 100% |
 | `matrisk.analytics.stress` | 100% |
-| `matrisk.analytics.waterfall` | 89% |
-| `matrisk.reporting.dashboard` | 94% |
-| **TOTAL** | **95.29%** |
-
-## MLflow tracking
-
-```bash
-python scripts/run_stress_sweep.py
-mlflow ui --backend-store-uri file:./mlruns
-```
-
-This runs each scenario as a separate MLflow run, logging PD/LGD
-multipliers as parameters and stressed ECL + per-tranche loss
-absorption as metrics.
+| `matrisk.analytics.waterfall` | 100% |
+| `matrisk.pipeline` | 100% |
+| **TOTAL** | **98%** |
 
 ## Power BI handoff
 
-`powerbi/model/` contains 10 dimension tables and 8 fact tables
-ready to import. `powerbi/dax/dax_measure_library.dax` has 110+
-calculated measures (`ECL_Total_Cr`, `Pool_Factor`, `Delinquency_30Plus_Pct`,
-`Stress_CRISIS_ECL_Cr`, ...). Wire-frame dashboard specs live under
-`powerbi/dashboards/`.
-
-## Documentation
-
-Build the Sphinx site:
-
-```bash
-sphinx-build -b html docs/source docs/build/html
-open docs/build/html/index.html
-```
-
-The Sphinx docs include an autodoc'd API reference plus rendered
-methodology pages.
+The same star schema this engine computes is documented in
+[`star_schema.md`](star_schema.md), and the 139 calculated measures in
+[`dax_measure_library.dax.txt`](dax_measure_library.dax.txt) (e.g.
+`[Pool Factor]`, `[30+ DPD %]`, `[Total ECL]`, `[Stressed ECL]`) are the
+DAX equivalents of the Python analytics here — the two agree by
+construction. The measure dictionary, ECL crosscheck, and waterfall
+validation live in the `*.xlsx` workbooks at the repo root.
 
 ## Contributing
 
@@ -233,4 +218,4 @@ Algorithms Pvt. Ltd. See `LICENSE` for the full proprietary terms.
 ## References
 
 A full literature review with 20+ academic and regulatory references
-appears in [`reports/technical_report.md`](reports/technical_report.md).
+appears in [`technical_report.md`](technical_report.md).

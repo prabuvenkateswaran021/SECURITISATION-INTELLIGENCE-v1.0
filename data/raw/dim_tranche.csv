@@ -1,0 +1,4 @@
+TrancheID,TrancheName,TrancheRank,CreditRating,CouponRate_Pct,OriginalBalance_INR,FirstLossPosition
+TR-A,Class A (Senior),1,AAA(SO),8.25,436800000.0,False
+TR-B,Class B (Mezzanine),2,AA(SO),10.5,65520000.0,False
+TR-C,Class C (Equity),3,NR,14.0,43680000.0,True

@@ -1,0 +1,101 @@
+# MatRisk AI — policy configuration for pool ZAAUTO2024-1.
+# Every threshold the analytics engine reads lives here; no magic numbers in code.
+
+pool:
+  pool_id: ZAAUTO2024-1
+  pool_name: Zenith Auto Receivables Trust 2024 Series 1
+  asset_class: Auto Loan
+  cutoff_date: "2024-10-30"
+  reporting_currency: INR
+
+# Synthetic-data generation parameters (seeded -> fully reproducible).
+generate:
+  seed: 20240101
+  n_loans: 500
+  n_snapshot_months: 12
+  # Target headline calibration for the pilot pool (approximate).
+  original_pool_balance_cr: 54.6      # crore INR
+  target_pool_factor: 0.582
+
+# IFRS 9 staging triggers.
+ifrs9:
+  sicr_dpd_threshold: 30      # > 30 DPD -> Stage 2 (SICR)
+  default_dpd_threshold: 90   # >= 90 DPD -> Stage 3 (credit-impaired)
+  sicr_cibil_drop: 50         # CIBIL fall vs origination that also trips SICR
+  lgd_floor: 0.10
+  lgd_ceiling: 0.80
+  stage3_pd_floor: 1.00       # confirmed default
+  stage1_pd_cap: 0.20         # 12-month PD ceiling for performing loans
+  # EAD-weighted base PD/LGD anchors used by the generator and crosschecks.
+  base_lgd: 0.35
+
+# Stress scenarios: PD/LGD multipliers + macro shocks. Calibration anchors
+# documented in assumptions_methodology.md section 3.
+scenarios:
+  - id: BASE
+    name: Base
+    pd_multiplier: 1.00
+    lgd_multiplier: 1.00
+    gdp_shock_bps: 0
+    repo_shock_bps: 0
+    unemployment_shock_bps: 0
+  - id: MILD
+    name: Mild Recession
+    pd_multiplier: 1.30
+    lgd_multiplier: 1.10
+    gdp_shock_bps: -100
+    repo_shock_bps: 25
+    unemployment_shock_bps: 50
+  - id: MODERATE
+    name: Moderate Slowdown
+    pd_multiplier: 1.80
+    lgd_multiplier: 1.25
+    gdp_shock_bps: -200
+    repo_shock_bps: 50
+    unemployment_shock_bps: 120
+  - id: SEVERE
+    name: Severe Recession
+    pd_multiplier: 2.80
+    lgd_multiplier: 1.45
+    gdp_shock_bps: -350
+    repo_shock_bps: 100
+    unemployment_shock_bps: 250
+  - id: CRISIS
+    name: Crisis
+    pd_multiplier: 4.50
+    lgd_multiplier: 1.75
+    gdp_shock_bps: -500
+    repo_shock_bps: 200
+    unemployment_shock_bps: 400
+
+# Capital stack. 80/12/8 split, sequential-pay (TR-A senior first).
+tranches:
+  - id: TR-A
+    name: Class A (Senior)
+    rank: 1
+    share: 0.80
+    coupon_pct: 8.25
+    rating: AAA(SO)
+    first_loss: false
+  - id: TR-B
+    name: Class B (Mezzanine)
+    rank: 2
+    share: 0.12
+    coupon_pct: 10.50
+    rating: AA(SO)
+    first_loss: false
+  - id: TR-C
+    name: Class C (Equity)
+    rank: 3
+    share: 0.08
+    coupon_pct: 14.00
+    rating: NR
+    first_loss: true
+
+# Sequential-pay waterfall mechanics (annualised rates applied monthly /12).
+waterfall:
+  servicer_fee_pct: 0.50      # of BOP pool balance, annualised
+  trustee_fee_pct: 0.05
+  senior_coupon_pct: 8.25
+  mezz_coupon_pct: 10.50
+  cash_reserve_target_pct: 0.03   # of original pool balance

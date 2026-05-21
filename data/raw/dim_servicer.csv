@@ -1,0 +1,4 @@
+ServicerID,ServicerName,ServicerType,ServicerRating
+SRV-HDFC,HDFC Bank,Bank,AAA
+SRV-ICICI,ICICI Bank,Bank,AAA
+SRV-BAJAJ,Bajaj Finance,NBFC,AA+

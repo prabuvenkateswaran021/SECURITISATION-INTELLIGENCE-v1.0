@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "matrisk"
+version = "1.0.0"
+description = "MatRisk AI — securitisation analytics kernel for Indian auto-loan ABS (IFRS 9 ECL, stress testing, waterfall)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Proprietary" }
+authors = [{ name = "Zetheta Algorithms Pvt. Ltd." }]
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "pydantic>=2.0",
+    "click>=8.1",
+    "pyyaml>=6.0",
+    "python-dateutil>=2.8",
+]
+
+[project.optional-dependencies]
+serve = ["fastapi>=0.110", "uvicorn>=0.27"]
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "openpyxl>=3.1", "httpx>=0.27"]
+
+[project.scripts]
+matrisk = "matrisk.cli.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["matrisk"]
+branch = true

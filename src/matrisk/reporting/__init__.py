@@ -1,0 +1,1 @@
+"""Reporting: dashboard payload assembly."""

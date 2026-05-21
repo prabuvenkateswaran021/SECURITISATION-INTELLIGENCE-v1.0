@@ -1,0 +1,6 @@
+ScenarioID,ScenarioName,PD_Multiplier,LGD_Multiplier,Recovery_Haircut_Pct,GDP_Shock_bps,Repo_Shock_bps,Unemployment_Shock_bps
+BASE,Base,1.0,1.0,0.0,0,0,0
+MILD,Mild Recession,1.3,1.1,0.0,-100,25,50
+MODERATE,Moderate Slowdown,1.8,1.25,0.0,-200,50,120
+SEVERE,Severe Recession,2.8,1.45,0.0,-350,100,250
+CRISIS,Crisis,4.5,1.75,0.0,-500,200,400

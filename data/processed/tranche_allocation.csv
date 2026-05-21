@@ -1,0 +1,4 @@
+tranche_id,tranche,rank,thickness,loss_absorbed,loss_absorbed_pct,written_down
+TR-A,Class A (Senior),1,436800000.0,0.0,0.0,False
+TR-B,Class B (Mezzanine),2,65520000.0,18944100.552516952,0.2891346238174138,False
+TR-C,Class C (Equity),3,43680000.0,43680000.0,1.0,True

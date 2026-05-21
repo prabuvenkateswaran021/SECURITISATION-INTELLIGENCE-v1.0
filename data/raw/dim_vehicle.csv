@@ -1,0 +1,11 @@
+VehicleKey,VehicleMake,VehicleModel,VehicleType
+0,Maruti Suzuki,Swift,Hatchback
+1,Maruti Suzuki,Baleno,Hatchback
+2,Hyundai,Creta,SUV
+3,Hyundai,i20,Hatchback
+4,Tata,Nexon,SUV
+5,Tata,Punch,SUV
+6,Mahindra,XUV700,SUV
+7,Kia,Seltos,SUV
+8,Toyota,Innova,MPV
+9,Honda,City,Sedan
