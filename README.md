@@ -9,7 +9,8 @@
 
 ![architecture](reports/figures/architecture.png)
 
-[![tests](https://img.shields.io/badge/tests-113%20passing-brightgreen)]() [![coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)]() [![python](https://img.shields.io/badge/python-3.10%2B-blue)]() [![license](https://img.shields.io/badge/license-Proprietary-orange)]()
+[![tests](https://img.shields.io/badge/tests-113%20passing-brightgreen)]() [![coverage](https://img.shields.io/badge/coverage-95%25-brightgreen)]()
+ [![license](https://img.shields.io/badge/license-Proprietary-orange)]()
 
 ---
 
